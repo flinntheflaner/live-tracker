@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live Location Tracker</title>
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body {
@@ -33,28 +32,23 @@
   <div id="status">Loading location...</div>
   <div id="map"></div>
 
-  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Supabase Client Configuration
     const supabaseUrl = "https://ypiruujwnjzoqwsrlneg.supabase.co";
     const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwaXJ1dWp3bmp6b3F3c3JsbmVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAyNjg1NTgsImV4cCI6MjA1NTg0NDU1OH0.ESBYKepy-7P62uCJ8LNPIa_NNqwigARwtDJ6w-XtcaA";
     const supabase = Supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-    // Get token from URL
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
+    console.log('Token from URL:', token);
 
-    // Initialize Leaflet map
     const map = L.map('map').setView([0, 0], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
     let marker = null;
 
-    // Function to update map with new location
     function updateMap(latitude, longitude) {
       if (!marker) {
         marker = L.marker([latitude, longitude]).addTo(map);
@@ -65,13 +59,13 @@
       document.getElementById('status').textContent = `Live Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
     }
 
-    // Function to fetch initial location
     async function fetchInitialLocation() {
       const { data, error } = await supabase
         .from('live_locations')
         .select('latitude, longitude, expires_at')
         .eq('share_id', token)
         .single();
+      console.log('Fetch result:', { data, error });
 
       if (error || !data) {
         document.getElementById('status').textContent = error?.message || 'Location not found or expired.';
@@ -80,16 +74,15 @@
       }
 
       const { latitude, longitude, expires_at } = data;
+      console.log('Initial location:', { latitude, longitude, expires_at });
       updateMap(latitude, longitude);
 
-      // Check if link is expired
       if (new Date(expires_at) < new Date()) {
         document.getElementById('status').textContent = 'This location share has expired.';
         return;
       }
     }
 
-    // Subscribe to real-time updates
     if (token) {
       fetchInitialLocation();
 
@@ -101,24 +94,27 @@
           table: 'live_locations', 
           filter: `share_id=eq.${token}` 
         }, (payload) => {
+          console.log('Update received:', payload);
           const { latitude, longitude, expires_at } = payload.new;
           if (new Date(expires_at) > new Date()) {
             updateMap(latitude, longitude);
           } else {
             document.getElementById('status').textContent = 'This location share has expired.';
-            supabase.removeChannel('live_locations'); // Clean up subscription
+            supabase.removeChannel('live_locations');
           }
         })
         .subscribe((status) => {
+          console.log('Subscription status:', status);
           if (status === 'SUBSCRIBED') {
             console.log('Subscribed to live location updates');
           } else {
-            console.error('Subscription status:', status);
+            console.error('Subscription failed:', status);
             document.getElementById('status').textContent = 'Failed to connect to live updates.';
           }
         });
     } else {
       document.getElementById('status').textContent = 'No tracking token provided in URL.';
+      console.error('No token provided');
     }
   </script>
 </body>
