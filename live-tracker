@@ -1,0 +1,4 @@
+<script>start("/Users/billsokamte/neya/live-tracker/");</script>
+<script>onHasParentDirectory();</script>
+<script>addRow(".git",".git",1,384,"384 B",1743362604,"3/30/25, 3:23:24 PM");</script>
+<script>addRow("index.html","index.html",0,4243,"4.1 kB",1743361890,"3/30/25, 3:11:30 PM");</script>
